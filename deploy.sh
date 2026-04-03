@@ -2,6 +2,7 @@
 # Деплой на VPS: синхронизирует локальную папку с /var/www/sales_trainer
 
 rsync -avz --delete \
+  --exclude '.git' \
   --exclude 'node_modules' \
   --exclude '.env' \
   --exclude 'data/*.db' \
