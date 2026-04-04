@@ -18,7 +18,7 @@ router.post('/token', async (req, res) => {
         instructions: `Ты — дружелюбный собеседник. Говори естественно, как живой человек.
 Общайся только на русском языке. Отвечай кратко и по делу.`,
         input_audio_transcription: {
-          model: 'whisper-1',
+          model: 'gpt-4o-transcribe',
           language: 'ru'
         },
         turn_detection: {
