@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 export function useRealtimeSession() {
   const [isActive, setIsActive] = useState(false);
@@ -164,6 +164,23 @@ export function useRealtimeSession() {
 
     setSpeaking('idle');
     setIsActive(false);
+  }, []);
+
+  // Автозакрытие сессии при закрытии вкладки
+  useEffect(() => {
+    const handleUnload = () => {
+      if (sessionIdRef.current) {
+        navigator.sendBeacon(
+          '/api/session/end',
+          new Blob(
+            [JSON.stringify({ sessionId: sessionIdRef.current })],
+            { type: 'application/json' }
+          )
+        );
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
   }, []);
 
   return { isActive, messages, speaking, startSession, stopSession };
