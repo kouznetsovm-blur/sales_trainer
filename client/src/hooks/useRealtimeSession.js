@@ -67,24 +67,27 @@ export function useRealtimeSession() {
         upsertMessage(data.item_id, 'assistant', data.delta || '');
         break;
 
-      // Ответ AI завершён — сохраняем в БД
-      case 'response.audio_transcript.done': {
-        const text = data.transcript?.trim();
-        if (text && sessionIdRef.current) {
-          fetch('/api/session/message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: sessionIdRef.current, role: 'assistant', text })
-          });
-        }
+      case 'response.audio_transcript.done':
         setSpeaking('idle');
+        break;
+
+      // Ответ AI завершён — сохраняем в БД только если не прерван
+      case 'response.done': {
+        setSpeaking('idle');
+        if (data.response?.status === 'completed' && sessionIdRef.current) {
+          const transcript = data.response.output?.[0]?.content?.find(
+            c => c.type === 'audio'
+          )?.transcript?.trim();
+          if (transcript) {
+            fetch('/api/session/message', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId: sessionIdRef.current, role: 'assistant', text: transcript })
+            });
+          }
+        }
         break;
       }
-
-      // AI замолчал (ответ завершён или прерван)
-      case 'response.done':
-        setSpeaking('idle');
-        break;
 
       default:
         break;
