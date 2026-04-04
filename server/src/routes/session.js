@@ -14,7 +14,7 @@ router.post('/token', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'gpt-realtime',
-        voice: 'sage',
+        voice: 'cedar',
         instructions: `Ты — дружелюбный собеседник. Говори естественно, как живой человек.
 Общайся только на русском языке. Отвечай кратко и по делу.`,
         input_audio_transcription: {
