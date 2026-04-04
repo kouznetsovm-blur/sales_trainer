@@ -32,6 +32,7 @@ export function useRealtimeSession() {
     setMessages(prev => {
       const existing = prev.find(m => m.itemId === itemId);
       if (existing) {
+        if (!delta) return prev; // placeholder уже есть, ничего не делаем
         return prev.map(m =>
           m.itemId === itemId ? { ...m, text: m.text + delta } : m
         );
@@ -53,6 +54,14 @@ export function useRealtimeSession() {
       // Пользователь замолчал
       case 'input_speech_stopped':
         setSpeaking('idle');
+        break;
+
+      // Новый элемент разговора — резервируем место для сообщения пользователя
+      // ДО того как AI начнёт отвечать (response.created приходит позже)
+      case 'conversation.item.created':
+        if (data.item?.role === 'user') {
+          upsertMessage(data.item.id, 'user', '');
+        }
         break;
 
       // Дельта транскрипта пользователя (реальное время)
