@@ -6,6 +6,7 @@ rsync -avz --delete \
   --exclude 'node_modules' \
   --exclude '.env' \
   --exclude 'data/*.db' \
+  --exclude 'client/dist' \
   --exclude '.DS_Store' \
   "/Users/mikhail_kuznetsov/Library/Mobile Documents/com~apple~CloudDocs/hello/claude code/004_sales_trainer/" \
   root@161.35.68.238:/var/www/sales_trainer/
