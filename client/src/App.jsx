@@ -16,13 +16,15 @@ export default function App() {
   return (
     <div className="app">
       <Header />
-      <main className="main">
+      <div className="layout">
+        <main className="transcript-area">
+          <Transcript messages={messages} />
+        </main>
         <div className="controls">
           {isActive && <Pulsation speaking={speaking} />}
           <SessionButton isActive={isActive} onClick={handleToggle} />
         </div>
-        <Transcript messages={messages} />
-      </main>
+      </div>
     </div>
   );
 }
