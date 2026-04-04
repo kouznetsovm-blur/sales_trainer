@@ -151,7 +151,7 @@ export function useRealtimeSession() {
 
       // 7. Отправляем в OpenAI Realtime API
       const sdpRes = await fetch(
-        'https://api.openai.com/v1/realtime?model=gpt-realtime-mini',
+        'https://api.openai.com/v1/realtime?model=gpt-realtime',
         {
           method: 'POST',
           headers: {

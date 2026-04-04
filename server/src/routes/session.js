@@ -13,7 +13,7 @@ router.post('/token', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-realtime-mini',
+        model: 'gpt-realtime',
         voice: 'sage',
         instructions: `Ты — дружелюбный собеседник. Говори естественно, как живой человек.
 Общайся только на русском языке. Отвечай кратко и по делу.`,
