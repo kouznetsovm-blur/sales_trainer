@@ -1,0 +1,78 @@
+.pulsation-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 40px;
+  margin: 28px 0;
+}
+
+.pulse {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 72px;
+  height: 72px;
+  justify-content: center;
+}
+
+.pulse-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.2s ease;
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.pulse-ring-2 {
+  width: 60px;
+  height: 60px;
+}
+
+/* Пользователь — синий */
+.pulse-user .pulse-dot { background: #4a90d9; }
+.pulse-user .pulse-ring { border: 2px solid #4a90d9; }
+
+/* AI — оранжевый */
+.pulse-ai .pulse-dot { background: #f5a623; }
+.pulse-ai .pulse-ring { border: 2px solid #f5a623; }
+
+/* Активная пульсация */
+.pulse.active .pulse-dot {
+  transform: scale(1.2);
+}
+
+.pulse.active .pulse-ring {
+  animation: pulse-wave 1.4s ease-out infinite;
+}
+
+.pulse.active .pulse-ring-2 {
+  animation: pulse-wave 1.4s ease-out infinite 0.4s;
+}
+
+@keyframes pulse-wave {
+  0%   { opacity: 0.6; transform: scale(0.8); }
+  100% { opacity: 0;   transform: scale(1.8); }
+}
+
+.pulse-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #888;
+  margin-top: 36px;
+  position: absolute;
+  bottom: -4px;
+  white-space: nowrap;
+}

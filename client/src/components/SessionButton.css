@@ -1,0 +1,44 @@
+.session-btn {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: #22c55e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.session-btn.active {
+  background: #ef4444;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+}
+
+.session-btn:hover {
+  transform: scale(1.05);
+}
+
+.session-btn:active {
+  transform: scale(0.97);
+}
+
+/* Треугольник (play) */
+.icon-play {
+  width: 0;
+  height: 0;
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  border-left: 22px solid #ffffff;
+  margin-left: 4px;
+}
+
+/* Квадрат (stop) */
+.icon-stop {
+  width: 22px;
+  height: 22px;
+  background: #ffffff;
+  border-radius: 3px;
+}
