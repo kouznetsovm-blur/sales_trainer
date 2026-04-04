@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { authFetch, getToken } from '../utils/api.js';
 
 export function useRealtimeSession() {
   const [isActive, setIsActive] = useState(false);
@@ -8,9 +9,7 @@ export function useRealtimeSession() {
   // Фильтр галлюцинаций Whisper
   const isValidTranscript = (text) => {
     if (!text || text.trim().length < 3) return false;
-    // Только эмодзи или спецсимволы
     if (/^[\p{Emoji}\s\p{P}]+$/u.test(text)) return false;
-    // Известные паттерны галлюцинаций Whisper
     const hallucinations = [
       'субтитры сделал', 'продолжение следует', 'напряжённая музыка',
       'напряженная музыка', 'тихая музыка', 'музыка играет',
@@ -21,18 +20,16 @@ export function useRealtimeSession() {
     return true;
   };
 
-  const pcRef = useRef(null);       // RTCPeerConnection
-  const dcRef = useRef(null);       // DataChannel
-  const audioRef = useRef(null);    // Audio element для голоса AI
+  const pcRef = useRef(null);
+  const dcRef = useRef(null);
+  const audioRef = useRef(null);
   const sessionIdRef = useRef(null);
-  const pendingMsgRef = useRef({}); // Накапливаем текст до завершения реплики
 
-  // Добавить или обновить сообщение по itemId
   const upsertMessage = useCallback((itemId, role, delta) => {
     setMessages(prev => {
       const existing = prev.find(m => m.itemId === itemId);
       if (existing) {
-        if (!delta) return prev; // placeholder уже есть, ничего не делаем
+        if (!delta) return prev;
         return prev.map(m =>
           m.itemId === itemId ? { ...m, text: m.text + delta } : m
         );
@@ -45,49 +42,40 @@ export function useRealtimeSession() {
     const data = JSON.parse(event.data);
 
     switch (data.type) {
-
-      // Пользователь начал говорить
       case 'input_speech_started':
         setSpeaking('user');
         break;
 
-      // Пользователь замолчал
       case 'input_speech_stopped':
         setSpeaking('idle');
         break;
 
-      // Новый элемент разговора — резервируем место для сообщения пользователя
-      // ДО того как AI начнёт отвечать (response.created приходит позже)
       case 'conversation.item.created':
         if (data.item?.role === 'user') {
           upsertMessage(data.item.id, 'user', '');
         }
         break;
 
-      // Дельта транскрипта пользователя (реальное время)
       case 'conversation.item.input_audio_transcription.delta':
         upsertMessage(data.item_id, 'user', data.delta || '');
         break;
 
-      // Транскрипт пользователя завершён — сохраняем в БД если не галлюцинация
       case 'conversation.item.input_audio_transcription.completed': {
         const text = data.transcript?.trim();
         if (isValidTranscript(text) && sessionIdRef.current) {
-          fetch('/api/session/message', {
+          authFetch('/api/session/message', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            silent: true,
             body: JSON.stringify({ sessionId: sessionIdRef.current, role: 'user', text })
           });
         }
         break;
       }
 
-      // AI начал отвечать
       case 'response.created':
         setSpeaking('ai');
         break;
 
-      // Дельта транскрипта AI (реальное время)
       case 'response.audio_transcript.delta':
         upsertMessage(data.item_id, 'assistant', data.delta || '');
         break;
@@ -96,7 +84,6 @@ export function useRealtimeSession() {
         setSpeaking('idle');
         break;
 
-      // Ответ AI завершён — сохраняем в БД только если не прерван
       case 'response.done': {
         setSpeaking('idle');
         if (data.response?.status === 'completed' && sessionIdRef.current) {
@@ -104,9 +91,9 @@ export function useRealtimeSession() {
             c => c.type === 'audio'
           )?.transcript?.trim();
           if (transcript) {
-            fetch('/api/session/message', {
+            authFetch('/api/session/message', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              silent: true,
               body: JSON.stringify({ sessionId: sessionIdRef.current, role: 'assistant', text: transcript })
             });
           }
@@ -119,37 +106,38 @@ export function useRealtimeSession() {
     }
   }, [upsertMessage]);
 
-  const startSession = useCallback(async () => {
+  const startSession = useCallback(async (testId) => {
     try {
-      // 1. Получаем ephemeral token с нашего сервера
-      const res = await fetch('/api/session/token', { method: 'POST' });
+      const res = await authFetch('/api/session/token', {
+        method: 'POST',
+        body: JSON.stringify({ testId })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('Не удалось получить токен:', err.error);
+        return;
+      }
       const { token, sessionId } = await res.json();
       sessionIdRef.current = sessionId;
 
-      // 2. Создаём WebRTC соединение
       const pc = new RTCPeerConnection();
       pcRef.current = pc;
 
-      // 3. Аудио элемент для воспроизведения голоса AI
       const audio = document.createElement('audio');
       audio.autoplay = true;
       audioRef.current = audio;
       pc.ontrack = (e) => { audio.srcObject = e.streams[0]; };
 
-      // 4. Захватываем микрофон
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      // 5. Data channel для событий
       const dc = pc.createDataChannel('oai-events');
       dcRef.current = dc;
       dc.onmessage = handleEvent;
 
-      // 6. SDP offer
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // 7. Отправляем в OpenAI Realtime API
       const sdpRes = await fetch(
         'https://api.openai.com/v1/realtime?model=gpt-realtime',
         {
@@ -166,14 +154,12 @@ export function useRealtimeSession() {
       await pc.setRemoteDescription({ type: 'answer', sdp: sdpAnswer });
 
       setIsActive(true);
-
     } catch (err) {
       console.error('Ошибка запуска сессии:', err);
     }
   }, [handleEvent]);
 
   const stopSession = useCallback(() => {
-    // Закрываем WebRTC
     if (dcRef.current) dcRef.current.close();
     if (pcRef.current) pcRef.current.close();
     if (audioRef.current) audioRef.current.srcObject = null;
@@ -181,11 +167,9 @@ export function useRealtimeSession() {
     pcRef.current = null;
     dcRef.current = null;
 
-    // Завершаем сессию в БД
     if (sessionIdRef.current) {
-      fetch('/api/session/end', {
+      authFetch('/api/session/end', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: sessionIdRef.current })
       });
     }
@@ -201,7 +185,7 @@ export function useRealtimeSession() {
         navigator.sendBeacon(
           '/api/session/end',
           new Blob(
-            [JSON.stringify({ sessionId: sessionIdRef.current })],
+            [JSON.stringify({ sessionId: sessionIdRef.current, token: getToken() })],
             { type: 'application/json' }
           )
         );

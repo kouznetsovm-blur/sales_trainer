@@ -17,7 +17,13 @@
   box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
 }
 
-.session-btn:hover {
+.session-btn.disabled {
+  background: #d0d0d0;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.session-btn:not(.disabled):hover {
   transform: scale(1.05);
 }
 

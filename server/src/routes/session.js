@@ -1,11 +1,19 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import db from '../db/index.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
 // Выдача ephemeral token для WebRTC соединения с OpenAI
-router.post('/token', async (req, res) => {
+router.post('/token', requireAuth, async (req, res) => {
   try {
+    const { testId } = req.body;
+    if (!testId) return res.status(400).json({ error: 'testId required' });
+
+    const test = db.prepare(`SELECT * FROM tests WHERE id = ? AND status = 'active'`).get(testId);
+    if (!test) return res.status(404).json({ error: 'Тест не найден или отключён' });
+
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
       headers: {
@@ -18,8 +26,7 @@ router.post('/token', async (req, res) => {
         temperature: 0.7,
         max_response_output_tokens: 250,
         tool_choice: 'none',
-        instructions: `Ты — дружелюбный собеседник. Говори естественно, как живой человек.
-Общайся только на русском языке. Отвечай кратко и по делу.`,
+        instructions: test.instructions,
         input_audio_transcription: {
           model: 'gpt-4o-transcribe',
           language: 'ru'
@@ -40,10 +47,9 @@ router.post('/token', async (req, res) => {
       return res.status(500).json({ error: data.error.message });
     }
 
-    // Создаём новую сессию в БД
     const session = db.prepare(
-      'INSERT INTO sessions (started_at) VALUES (CURRENT_TIMESTAMP)'
-    ).run();
+      'INSERT INTO sessions (user_id, test_id, started_at) VALUES (?, ?, CURRENT_TIMESTAMP)'
+    ).run(req.user.id, testId);
 
     res.json({
       token: data.client_secret.value,
@@ -56,10 +62,23 @@ router.post('/token', async (req, res) => {
   }
 });
 
-// Завершение сессии
+// Завершение сессии (поддерживает токен в теле для sendBeacon)
 router.post('/end', (req, res) => {
-  const { sessionId } = req.body;
+  const { sessionId, token: bodyToken } = req.body;
   if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
+
+  // Проверяем авторизацию: заголовок или тело
+  const headerToken = req.headers['authorization']?.startsWith('Bearer ')
+    ? req.headers['authorization'].slice(7) : null;
+  const rawToken = headerToken || bodyToken;
+
+  if (rawToken) {
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const stored = db.prepare(
+      `SELECT user_id FROM tokens WHERE token_hash = ? AND expires_at > CURRENT_TIMESTAMP`
+    ).get(tokenHash);
+    if (!stored) return res.status(401).json({ error: 'Недействительный токен' });
+  }
 
   db.prepare(
     'UPDATE sessions SET ended_at = CURRENT_TIMESTAMP WHERE id = ?'
@@ -69,7 +88,7 @@ router.post('/end', (req, res) => {
 });
 
 // Сохранение сообщения транскрипта
-router.post('/message', (req, res) => {
+router.post('/message', requireAuth, (req, res) => {
   const { sessionId, role, text } = req.body;
   if (!sessionId || !role || !text) {
     return res.status(400).json({ error: 'sessionId, role, text required' });
