@@ -5,6 +5,22 @@ export function useRealtimeSession() {
   const [messages, setMessages] = useState([]);
   const [speaking, setSpeaking] = useState('idle'); // 'idle' | 'user' | 'ai'
 
+  // Фильтр галлюцинаций Whisper
+  const isValidTranscript = (text) => {
+    if (!text || text.trim().length < 3) return false;
+    // Только эмодзи или спецсимволы
+    if (/^[\p{Emoji}\s\p{P}]+$/u.test(text)) return false;
+    // Известные паттерны галлюцинаций Whisper
+    const hallucinations = [
+      'субтитры сделал', 'продолжение следует', 'напряжённая музыка',
+      'напряженная музыка', 'тихая музыка', 'музыка играет',
+      'www.', 'http', 'copyright'
+    ];
+    const lower = text.toLowerCase();
+    if (hallucinations.some(h => lower.includes(h))) return false;
+    return true;
+  };
+
   const pcRef = useRef(null);       // RTCPeerConnection
   const dcRef = useRef(null);       // DataChannel
   const audioRef = useRef(null);    // Audio element для голоса AI
@@ -44,10 +60,10 @@ export function useRealtimeSession() {
         upsertMessage(data.item_id, 'user', data.delta || '');
         break;
 
-      // Транскрипт пользователя завершён — сохраняем в БД
+      // Транскрипт пользователя завершён — сохраняем в БД если не галлюцинация
       case 'conversation.item.input_audio_transcription.completed': {
         const text = data.transcript?.trim();
-        if (text && sessionIdRef.current) {
+        if (isValidTranscript(text) && sessionIdRef.current) {
           fetch('/api/session/message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
