@@ -27,7 +27,7 @@ router.post('/token', async (req, res) => {
         turn_detection: {
           type: 'server_vad',
           threshold: 0.9,
-          silence_duration_ms: 800,
+          silence_duration_ms: 1000,
           prefix_padding_ms: 300
         }
       })

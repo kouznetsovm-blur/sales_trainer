@@ -143,7 +143,7 @@
 |---|---|---|
 | `turn_detection.type` | Тип детекции | `server_vad` |
 | `turn_detection.threshold` | Порог громкости (0–1): выше = только чёткая речь | `0.9` |
-| `turn_detection.silence_duration_ms` | Пауза тишины (мс) перед отправкой реплики | `800` |
+| `turn_detection.silence_duration_ms` | Пауза тишины (мс) перед отправкой реплики | `1000` |
 | `turn_detection.prefix_padding_ms` | Захват аудио (мс) до начала речи | `300` |
 
 ---
