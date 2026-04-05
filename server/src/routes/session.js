@@ -26,7 +26,7 @@ router.post('/token', requireAuth, async (req, res) => {
         temperature: 0.7,
         max_response_output_tokens: 250,
         tool_choice: 'none',
-        instructions: test.instructions,
+        instructions: test.instructions + `\n\nВременной лимит: разговор рассчитан на ${test.duration_minutes} минут. Когда время подходит к концу, вежливо заверши разговор — скажи, что хочешь успеть на следующий интересный доклад, и попрощайся.`,
         input_audio_transcription: {
           model: 'gpt-4o-transcribe',
           language: 'ru'

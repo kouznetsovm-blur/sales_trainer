@@ -5,7 +5,7 @@ rsync -avz --delete \
   --exclude '.git' \
   --exclude 'node_modules' \
   --exclude '.env' \
-  --exclude 'data/*.db' \
+  --exclude 'data/' \
   --exclude 'client/dist' \
   --exclude '.DS_Store' \
   "/Users/mikhail_kuznetsov/Library/Mobile Documents/com~apple~CloudDocs/hello/claude code/004_sales_trainer/" \
