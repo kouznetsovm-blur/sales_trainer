@@ -83,32 +83,34 @@ router.delete('/users/:id', (req, res) => {
 // Все тесты (включая отключённые)
 router.get('/tests', (req, res) => {
   const tests = db.prepare(`
-    SELECT id, title, description, instructions, status, created_at FROM tests ORDER BY title
+    SELECT id, title, description, instructions, duration_minutes, status, created_at FROM tests ORDER BY title
   `).all();
   res.json(tests);
 });
 
 // Создать тест
 router.post('/tests', (req, res) => {
-  const { title, description, instructions } = req.body;
+  const { title, description, instructions, duration_minutes } = req.body;
   if (!title || !instructions) {
     return res.status(400).json({ error: 'Укажите название и инструкцию' });
   }
+  const duration = parseInt(duration_minutes) || 5;
   const result = db.prepare(`
-    INSERT INTO tests (title, description, instructions, status) VALUES (?, ?, ?, 'active')
-  `).run(title, description || '', instructions);
-  res.json({ id: result.lastInsertRowid, title, description: description || '', status: 'active' });
+    INSERT INTO tests (title, description, instructions, duration_minutes, status) VALUES (?, ?, ?, ?, 'active')
+  `).run(title, description || '', instructions, duration);
+  res.json({ id: result.lastInsertRowid, title, description: description || '', duration_minutes: duration, status: 'active' });
 });
 
 // Редактировать тест
 router.put('/tests/:id', (req, res) => {
-  const { title, description, instructions } = req.body;
+  const { title, description, instructions, duration_minutes } = req.body;
   if (!title || !instructions) {
     return res.status(400).json({ error: 'Укажите название и инструкцию' });
   }
+  const duration = parseInt(duration_minutes) || 5;
   const result = db.prepare(`
-    UPDATE tests SET title = ?, description = ?, instructions = ? WHERE id = ?
-  `).run(title, description || '', instructions, req.params.id);
+    UPDATE tests SET title = ?, description = ?, instructions = ?, duration_minutes = ? WHERE id = ?
+  `).run(title, description || '', instructions, duration, req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: 'Тест не найден' });
   res.json({ ok: true });
 });

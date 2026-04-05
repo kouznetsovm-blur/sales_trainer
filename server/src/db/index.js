@@ -63,6 +63,10 @@ try {
   db.exec(`ALTER TABLE sessions ADD COLUMN test_id INTEGER REFERENCES tests(id)`);
 } catch (e) { /* already exists */ }
 
+try {
+  db.exec(`ALTER TABLE tests ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 5`);
+} catch (e) { /* already exists */ }
+
 // Seed default admin user
 const adminExists = db.prepare(`SELECT id FROM users WHERE username = ?`).get('kouznetsovm');
 if (!adminExists) {

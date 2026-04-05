@@ -14,7 +14,7 @@ export default function AdminPanel({ onLogout }) {
 
   // Tests tab
   const [tests, setTests] = useState([]);
-  const [testForm, setTestForm] = useState({ open: false, editId: null, title: '', description: '', instructions: '' });
+  const [testForm, setTestForm] = useState({ open: false, editId: null, title: '', description: '', instructions: '', duration_minutes: 5 });
 
   const [error, setError] = useState('');
 
@@ -48,7 +48,7 @@ export default function AdminPanel({ onLogout }) {
   const resetForms = () => {
     setCreateUserForm({ open: false, username: '', password: '', role: 'user' });
     setResetForm({ userId: null, password: '' });
-    setTestForm({ open: false, editId: null, title: '', description: '', instructions: '' });
+    setTestForm({ open: false, editId: null, title: '', description: '', instructions: '', duration_minutes: 5 });
     setError('');
   };
 
@@ -113,7 +113,7 @@ export default function AdminPanel({ onLogout }) {
       isEdit ? `/api/admin/tests/${testForm.editId}` : '/api/admin/tests',
       {
         method: isEdit ? 'PUT' : 'POST',
-        body: JSON.stringify({ title: testForm.title, description: testForm.description, instructions: testForm.instructions })
+        body: JSON.stringify({ title: testForm.title, description: testForm.description, instructions: testForm.instructions, duration_minutes: testForm.duration_minutes })
       }
     );
     if (res.ok) { resetForms(); loadTests(); return true; }
@@ -121,7 +121,7 @@ export default function AdminPanel({ onLogout }) {
   };
 
   const handleEditTest = (t) => {
-    setTestForm({ open: true, editId: t.id, title: t.title, description: t.description, instructions: t.instructions });
+    setTestForm({ open: true, editId: t.id, title: t.title, description: t.description, instructions: t.instructions, duration_minutes: t.duration_minutes ?? 5 });
     setError('');
   };
 
@@ -260,7 +260,7 @@ export default function AdminPanel({ onLogout }) {
           <div className="users-tab">
             <div className="users-toolbar">
               {!testForm.open && (
-                <button className="btn-primary" onClick={() => { setTestForm({ open: true, editId: null, title: '', description: '', instructions: '' }); setError(''); }}>
+                <button className="btn-primary" onClick={() => { setTestForm({ open: true, editId: null, title: '', description: '', instructions: '', duration_minutes: 5 }); setError(''); }}>
                   + Создать тест
                 </button>
               )}
@@ -274,6 +274,12 @@ export default function AdminPanel({ onLogout }) {
                     onChange={e => setTestForm(f => ({ ...f, title: e.target.value }))} autoFocus />
                   <input className="form-input" placeholder="Описание (1–2 строки)" value={testForm.description}
                     onChange={e => setTestForm(f => ({ ...f, description: e.target.value }))} />
+                  <div className="form-row" style={{ alignItems: 'center', gap: 8 }}>
+                    <label style={{ fontSize: 13, color: '#555', whiteSpace: 'nowrap' }}>Длительность (мин):</label>
+                    <input className="form-input" type="number" min="1" max="60" style={{ width: 72 }}
+                      value={testForm.duration_minutes}
+                      onChange={e => setTestForm(f => ({ ...f, duration_minutes: Number(e.target.value) }))} />
+                  </div>
                   <textarea className="form-textarea" placeholder="Инструкция для AI (системный промпт)"
                     value={testForm.instructions}
                     onChange={e => setTestForm(f => ({ ...f, instructions: e.target.value }))} rows={6} />
@@ -288,12 +294,13 @@ export default function AdminPanel({ onLogout }) {
             {error && <p className="admin-error">{error}</p>}
 
             <table className="users-table">
-              <thead><tr><th>Название</th><th>Описание</th><th>Статус</th><th>Действия</th></tr></thead>
+              <thead><tr><th>Название</th><th>Описание</th><th>Мин</th><th>Статус</th><th>Действия</th></tr></thead>
               <tbody>
                 {tests.map(t => (
                   <tr key={t.id}>
                     <td className="td-username">{t.title}</td>
                     <td className="td-desc">{t.description}</td>
+                    <td>{t.duration_minutes ?? 5}</td>
                     <td><span className={`badge badge-${t.status === 'active' ? 'active' : 'blocked'}`}>{t.status === 'active' ? 'активен' : 'отключён'}</span></td>
                     <td className="td-actions">
                       <button className="btn-sm btn-secondary" onClick={() => handleEditTest(t)}>Изменить</button>
